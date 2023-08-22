@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from CK_td.TDAAuthentication import TDAAuthentication
+from Tda.TDAAuthentication import TDAAuthentication
 
 class TestTDAAuthentication:
     def __init__(self, client_id, redirect_uri, td_account_id, td_password):

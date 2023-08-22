@@ -1,8 +1,8 @@
 import unittest
 import os
 from dotenv import load_dotenv
-from CK_td.TDAAuthentication import TDAAuthentication
-from CK_td.TDDataQuery import TDDataQuery
+from Tda.TDAAuthentication import TDAAuthentication
+from Tda.TDDataQuery import TDDataQuery
 
 class TestTDDataQuery(unittest.TestCase):
 

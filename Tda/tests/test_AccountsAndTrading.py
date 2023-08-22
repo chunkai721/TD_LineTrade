@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
-from CK_td.TDAAuthentication import TDAAuthentication
-from CK_td.TDAccountsAndTrading import TDAccountsAndTrading
+from Tda.TDAAuthentication import TDAAuthentication
+from Tda.TDAccountsAndTrading import TDAccountsAndTrading
 
 class TestTDAccountsAndTrading:
     def __init__(self, auth):
