@@ -12,7 +12,7 @@ class TDDataQuery:
         self._headers = {
             "Authorization": f"Bearer {self.access_token}"
         }
-        # Initialize logging
+        # 初始化日誌
         self._logger = logging.getLogger(__name__)
         logging.basicConfig(level=logging.INFO)
 
@@ -20,18 +20,18 @@ class TDDataQuery:
         response = requests.get(url, headers=self._headers, params=params)
         self._logger.info(f"狀態碼: {response.status_code}")
         
-        response.raise_for_status()  # Raise an exception for HTTP errors
+        response.raise_for_status()  # 對HTTP錯誤引發異常
         
         try:
             return response.json()
         except json.decoder.JSONDecodeError:
-            self._logger.error("Unable to decode JSON from the response.")
-            return {"error": "Invalid JSON response"}
+            self._logger.error("無法從回應中解碼JSON。")
+            return {"error": "無效的JSON回應"}
 
     def search_instruments(self, searchText=None, symbol=None, projection=None):
         if not searchText and not symbol:
-            self._logger.error("Either 'searchText' or 'symbol' must be provided.")
-            return {"error": "Invalid parameters"}
+            self._logger.error("必須提供'searchText'或'symbol'。")
+            return {"error": "無效的參數"}
         
         url = f"{self.BASE_URL}/instruments"
         params = {
