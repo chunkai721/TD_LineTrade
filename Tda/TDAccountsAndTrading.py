@@ -18,17 +18,13 @@ class TDAccountsAndTrading:
     # Account Information
     def get_account(self, account_id, fields=None):
         endpoint = f"{self.base_url}/accounts/{account_id}"
-        params = {}
-        if fields:
-            params["fields"] = fields
+        params = {"fields": fields} if fields else {}
         response = requests.get(endpoint, headers=self.headers, params=params)
         return self._handle_response(response)
 
     def get_accounts(self, fields=None):
         endpoint = f"{self.base_url}/accounts"
-        params = {}
-        if fields:
-            params["fields"] = fields
+        params = {"fields": fields} if fields else {}
         response = requests.get(endpoint, headers=self.headers, params=params)
         return self._handle_response(response)
 

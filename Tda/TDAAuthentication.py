@@ -10,7 +10,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from dotenv import load_dotenv
 
-
 # Check if we are in a Docker environment
 IN_DOCKER = os.environ.get('IN_DOCKER', 'False').lower() == 'true'
 
@@ -18,7 +17,9 @@ if IN_DOCKER:
     from pyvirtualdisplay import Display
 
 class TDAAuthentication:
+
     def __init__(self, client_id, redirect_uri):
+        self.session = requests.Session()  # 使用Session來管理請求
         self.client_id = client_id
         self.redirect_uri = redirect_uri
         self.base_url = "https://auth.tdameritrade.com"
@@ -50,51 +51,39 @@ class TDAAuthentication:
         return display, driver
 
     def get_authentication_code(self, td_account_id, td_password):
-        """Retrieve the authentication code using Selenium."""
         display, driver = self._initialize_selenium()
-
-        # Construct the URL and open it
         url = self.get_authentication_url()
         driver.get(url)
-
-        # Wait for the username input to be present
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, 'username0')))
-
-        # Login process using Selenium
-        driver.find_element(By.ID, 'username0').send_keys(td_account_id)
-        time.sleep(3)
-        driver.find_element(By.ID, 'password1').send_keys(td_password)
-        time.sleep(3)
-        driver.find_element(By.ID, 'accept').click()
-        time.sleep(3)
-        driver.find_element(By.ID, 'accept').click()
-        time.sleep(3)
-
-        # Extract the code from the URL
+        
+        # 使用WebDriverWait來等待元素出現
+        username_element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, 'username0')))
+        username_element.send_keys(td_account_id)
+        
+        password_element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, 'password1')))
+        password_element.send_keys(td_password)
+        
+        accept_button = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, 'accept')))
+        accept_button.click()
+        
+        # 等待第二次accept按鈕出現並點擊
+        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, 'accept'))).click()
+        
         new_url = driver.current_url
         auth_code = urllib.parse.unquote(new_url.split('code=')[1])
-        
         driver.quit()
         if display:
             display.stop()
-
         return auth_code
 
     def _post_request(self, data):
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
-        response = requests.post(self.token_endpoint, headers=headers, data=data)
-        if response.status_code == 200:
+        try:
+            response = self.session.post(self.token_endpoint, headers=headers, data=data)
+            response.raise_for_status()
             return response.json()
-        else:
-            error_msg = {
-                400: "Validation problem with the request.",
-                401: "Invalid credentials in the request body.",
-                403: "Caller doesn't have access to the account in the request.",
-                500: "Unexpected server error.",
-                503: "Temporary problem responding."
-            }.get(response.status_code, "Unknown error.")
-            print("Error:", error_msg)
-            return {}  # 返回空字典而不是None
+        except requests.RequestException as e:
+            print(f"Error during request: {e}")
+            return {}
 
     def get_tokens(self, authorization_code):
         data = {
@@ -106,12 +95,12 @@ class TDAAuthentication:
         }
         tokens = self._post_request(data)
         if tokens:
-            self.access_token = tokens["access_token"]
-            self.refresh_token = tokens["refresh_token"]
-            self.expires_in = tokens["expires_in"]
-            self.refresh_token_expires_in = tokens["refresh_token_expires_in"]
-            self.scope = tokens["scope"]
-            self.save_tokens_to_env()  # 保存 tokens 到 .env 文件
+            self.access_token = tokens.get("access_token")
+            self.refresh_token = tokens.get("refresh_token")
+            self.expires_in = tokens.get("expires_in")
+            self.refresh_token_expires_in = tokens.get("refresh_token_expires_in")
+            self.scope = tokens.get("scope")
+            self.save_tokens_to_env()
 
     def refresh_access_token(self):
         data = {
@@ -146,44 +135,15 @@ class TDAAuthentication:
     def save_tokens_to_env(self):
         """Save tokens and their expiration times to .env."""
         env_path = os.path.join(os.path.dirname(__file__), 'config', '.env')
-
-        # Check if .env file exists
         if not os.path.exists(env_path):
             print(f".env file not found at {env_path}")
             return
-        
-        # Read the existing content of the .env file
-        with open(env_path, 'r') as f:
-            content = f.readlines()
-
-        # Create a dictionary to store the new token values
-        new_values = {
-            "TDA_ACCESS_TOKEN": self.access_token,
-            "TDA_REFRESH_TOKEN": self.refresh_token,
-            "TDA_ACCESS_TOKEN_EXPIRY": (datetime.now() + timedelta(seconds=self.expires_in)).isoformat()
-        }
-        
-        # Only add refresh_token_expires_in if it exists
-        if hasattr(self, 'refresh_token_expires_in'):
-            new_values["TDA_REFRESH_TOKEN_EXPIRY"] = (datetime.now() + timedelta(seconds=self.refresh_token_expires_in)).isoformat()
-
-        # Update the content with the new token values
-        updated_content = []
-        for line in content:
-            key = line.split('=')[0]
-            if key in new_values:
-                updated_content.append(f"{key}={new_values[key]}\n")
-                del new_values[key]
-            else:
-                updated_content.append(line)
-
-        # Add any remaining new values
-        for key, value in new_values.items():
-            updated_content.append(f"{key}={value}\n")
-
-        # Write the updated content back to the .env file
         with open(env_path, 'w') as f:
-            f.writelines(updated_content)
+            f.write(f"TDA_ACCESS_TOKEN={self.access_token}\n")
+            f.write(f"TDA_REFRESH_TOKEN={self.refresh_token}\n")
+            f.write(f"TDA_ACCESS_TOKEN_EXPIRY={(datetime.now() + timedelta(seconds=self.expires_in)).isoformat()}\n")
+            if hasattr(self, 'refresh_token_expires_in'):
+                f.write(f"TDA_REFRESH_TOKEN_EXPIRY={(datetime.now() + timedelta(seconds=self.refresh_token_expires_in)).isoformat()}\n")
 
     def load_tokens_from_env(self):
         """Load tokens and their expiration times from .env."""
