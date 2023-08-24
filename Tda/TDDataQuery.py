@@ -7,8 +7,9 @@ class TDDataQuery:
     
     BASE_URL = "https://api.tdameritrade.com/v1/marketdata"
     
-    def __init__(self, access_token):
+    def __init__(self, access_token, client_id):
         self.access_token = access_token
+        self.client_id = client_id
         self._headers = {
             "Authorization": f"Bearer {self.access_token}"
         }
@@ -17,28 +18,41 @@ class TDDataQuery:
         logging.basicConfig(level=logging.INFO)
 
     def _make_request(self, url, params=None):
+        if params is None:
+            params = {}
+        params["apikey"] = self.client_id  # 添加client_id到請求參數中
         response = requests.get(url, headers=self._headers, params=params)
         self._logger.info(f"狀態碼: {response.status_code}")
-        print(response.text)
         response.raise_for_status()  # 對HTTP錯誤引發異常
         
         try:
             return response.json()
         except json.decoder.JSONDecodeError:
-            self._logger.error("無法從回應中解碼JSON。")
+            self._logger.error(f"無法從回應中解碼JSON。回應內容: {response.text}")  # 打印出回應的內容
             return {"error": "無效的JSON回應"}
 
-    def search_instruments(self, searchText=None, symbol=None, projection=None):
-        if not searchText and not symbol:
-            self._logger.error("必須提供'searchText'或'symbol'。")
-            return {"error": "無效的參數"}
-        
+    def search_instruments(self, symbol, projection, apikey=None):
+        # 檢查projection的有效性
+        valid_projections = ["symbol-search", "symbol-regex", "desc-search", "desc-regex", "fundamental"]
+        if projection not in valid_projections:
+            self._logger.error(f"無效的'projection'值。有效的選項是: {', '.join(valid_projections)}")
+            return {"error": "無效的'projection'值"}
+
+        # 檢查是否提供了symbol
+        if not symbol:
+            self._logger.error("必須提供'symbol'。")
+            return {"error": "缺少'symbol'參數"}
+
         url = f"{self.BASE_URL}/instruments"
         params = {
-            "searchText": searchText,
             "symbol": symbol,
             "projection": projection
         }
+
+        # 如果提供了apikey，則將其添加到請求參數中
+        if apikey:
+            params["apikey"] = apikey
+
         return self._make_request(url, params)
 
     def get_instrument_by_cusip(self, cusip):

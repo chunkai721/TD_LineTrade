@@ -1,3 +1,6 @@
+import sys
+sys.path.append("D:/SRC/TD_LINETRADE")
+
 import unittest
 import os
 from datetime import datetime, timedelta
@@ -31,15 +34,54 @@ class TestTDDataQuery(unittest.TestCase):
 
         cls.access_token = auth.access_token
 
-        # Initialize TDDataQuery instance
-        cls.data_query = TDDataQuery(cls.access_token)
+        # Initialize TDDataQuery instance with access_token and client_id
+        cls.data_query = TDDataQuery(cls.access_token, CLIENT_ID)
 
     def test_search_instruments(self):
-        result = self.data_query.search_instruments(searchText="AAPL")
+        result = self.data_query.search_instruments(symbol="AAPL")
         self.assertIsInstance(result, dict)  # 確保返回的是一個字典
         self.assertIn('AAPL', result.get('symbols', {}))  # 檢查字典中的內容
 
-    # Add more tests for other methods in TDDataQuery class...
+    def test_get_instrument_by_cusip(self):
+        # Replace with a valid CUSIP for your test
+        cusip = "YOUR_VALID_CUSIP"
+        result = self.data_query.get_instrument_by_cusip(cusip)
+        self.assertIsInstance(result, dict)
+
+    def test_get_market_hours(self):
+        markets = "EQUITY"
+        result = self.data_query.get_market_hours(markets)
+        self.assertIsInstance(result, dict)
+
+    def test_get_market_hours_for_specific_market(self):
+        market = "EQUITY"
+        result = self.data_query.get_market_hours_for_specific_market(market)
+        self.assertIsInstance(result, dict)
+
+    def test_get_movers_for_index(self):
+        index = "SPX.X"
+        result = self.data_query.get_movers_for_index(index)
+        self.assertIsInstance(result, dict)
+
+    def test_get_option_chain(self):
+        symbol = "AAPL"
+        result = self.data_query.get_option_chain(symbol)
+        self.assertIsInstance(result, dict)
+
+    def test_get_price_history(self):
+        symbol = "AAPL"
+        result = self.data_query.get_price_history(symbol)
+        self.assertIsInstance(result, dict)
+
+    def test_get_quotes(self):
+        symbols = ["AAPL", "MSFT"]
+        result = self.data_query.get_quotes(symbols)
+        self.assertIsInstance(result, dict)
+
+    def test_get_quote(self):
+        symbol = "AAPL"
+        result = self.data_query.get_quote(symbol)
+        self.assertIsInstance(result, dict)
 
 if __name__ == '__main__':
     unittest.main()

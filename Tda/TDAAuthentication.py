@@ -24,9 +24,17 @@ class TDAAuthentication:
         self.redirect_uri = redirect_uri
         self.base_url = "https://auth.tdameritrade.com"
         self.token_endpoint = "https://api.tdameritrade.com/v1/oauth2/token"
+        
+        # Step 1: Load tokens from .env
         self.load_tokens_from_env()
-        if not self.access_token or self.is_access_token_expired():
-            print("No valid access token found. Please authenticate.")
+
+        # Step 2: Check if the tokens are valid
+        if self.is_access_token_expired():
+            if self.refresh_token and not self.is_refresh_token_expired():
+                print("Refreshing access token...")
+                self.refresh_access_token()
+            else:
+                print("No valid access token found. Please authenticate.")
         else:
             print("Valid access token loaded.")
 

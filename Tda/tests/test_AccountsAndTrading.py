@@ -1,3 +1,5 @@
+import sys
+sys.path.append("D:/SRC/TD_LINETRADE")
 import os
 from dotenv import load_dotenv
 from Tda.TDAAuthentication import TDAAuthentication
