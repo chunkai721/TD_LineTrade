@@ -1,22 +1,38 @@
 import requests
+import json
+import logging
 
 class TDDataQuery:
+    """A class to query TD Ameritrade's market data."""
+    
     BASE_URL = "https://api.tdameritrade.com/v1/marketdata"
     
     def __init__(self, access_token):
         self.access_token = access_token
-        self.headers = {
+        self._headers = {
             "Authorization": f"Bearer {self.access_token}"
         }
+        # Initialize logging
+        self._logger = logging.getLogger(__name__)
+        logging.basicConfig(level=logging.INFO)
 
     def _make_request(self, url, params=None):
-        """Helper method to make API requests and handle errors."""
-        response = requests.get(url, headers=self.headers, params=params)
+        response = requests.get(url, headers=self._headers, params=params)
+        self._logger.info(f"狀態碼: {response.status_code}")
+        
         response.raise_for_status()  # Raise an exception for HTTP errors
-        return response.json()
+        
+        try:
+            return response.json()
+        except json.decoder.JSONDecodeError:
+            self._logger.error("Unable to decode JSON from the response.")
+            return {"error": "Invalid JSON response"}
 
-    # Instruments
     def search_instruments(self, searchText=None, symbol=None, projection=None):
+        if not searchText and not symbol:
+            self._logger.error("Either 'searchText' or 'symbol' must be provided.")
+            return {"error": "Invalid parameters"}
+        
         url = f"{self.BASE_URL}/instruments"
         params = {
             "searchText": searchText,

@@ -44,6 +44,7 @@ class TDAAuthentication:
         chrome_options.add_argument('--disable-dev-shm-usage')
         chrome_options.add_argument('--headless')
         chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument('--disable-webgl')
         driver = webdriver.Chrome(options=chrome_options)
 
         return display, driver
@@ -93,7 +94,7 @@ class TDAAuthentication:
                 503: "Temporary problem responding."
             }.get(response.status_code, "Unknown error.")
             print("Error:", error_msg)
-            return None
+            return {}  # 返回空字典而不是None
 
     def get_tokens(self, authorization_code):
         data = {
@@ -121,6 +122,10 @@ class TDAAuthentication:
         tokens = self._post_request(data)
         if tokens:
             self.access_token = tokens["access_token"]
+            self.expires_in = tokens["expires_in"]  # 更新expires_in屬性
+            # 檢查API是否返回了refresh_token_expires_in
+            if "refresh_token_expires_in" in tokens:
+                self.refresh_token_expires_in = tokens["refresh_token_expires_in"]  # 更新refresh_token_expires_in屬性
             self.save_tokens_to_env()  # 保存 tokens 到 .env 文件
 
     def refresh_all_tokens(self):
@@ -134,6 +139,8 @@ class TDAAuthentication:
         if tokens:
             self.access_token = tokens["access_token"]
             self.refresh_token = tokens["refresh_token"]
+            self.expires_in = tokens["expires_in"]  # 更新expires_in屬性
+            self.refresh_token_expires_in = tokens["refresh_token_expires_in"]  # 更新refresh_token_expires_in屬性
             self.save_tokens_to_env()  # 保存 tokens 到 .env 文件
     
     def save_tokens_to_env(self):
@@ -153,9 +160,12 @@ class TDAAuthentication:
         new_values = {
             "TDA_ACCESS_TOKEN": self.access_token,
             "TDA_REFRESH_TOKEN": self.refresh_token,
-            "TDA_ACCESS_TOKEN_EXPIRY": (datetime.now() + timedelta(seconds=self.expires_in)).isoformat(),
-            "TDA_REFRESH_TOKEN_EXPIRY": (datetime.now() + timedelta(seconds=self.refresh_token_expires_in)).isoformat()
+            "TDA_ACCESS_TOKEN_EXPIRY": (datetime.now() + timedelta(seconds=self.expires_in)).isoformat()
         }
+        
+        # Only add refresh_token_expires_in if it exists
+        if hasattr(self, 'refresh_token_expires_in'):
+            new_values["TDA_REFRESH_TOKEN_EXPIRY"] = (datetime.now() + timedelta(seconds=self.refresh_token_expires_in)).isoformat()
 
         # Update the content with the new token values
         updated_content = []
