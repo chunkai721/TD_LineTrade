@@ -19,7 +19,7 @@ class TDDataQuery:
     def _make_request(self, url, params=None):
         response = requests.get(url, headers=self._headers, params=params)
         self._logger.info(f"狀態碼: {response.status_code}")
-        
+        print(response.text)
         response.raise_for_status()  # 對HTTP錯誤引發異常
         
         try:
