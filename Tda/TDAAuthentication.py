@@ -138,12 +138,28 @@ class TDAAuthentication:
         if not os.path.exists(env_path):
             print(f".env file not found at {env_path}")
             return
+
+        # 讀取原始.env文件的內容
+        with open(env_path, 'r') as f:
+            lines = f.readlines()
+
+        # 更新或添加新的token資訊
+        new_content = []
+        for line in lines:
+            if line.startswith("TDA_ACCESS_TOKEN="):
+                new_content.append(f"TDA_ACCESS_TOKEN={self.access_token}\n")
+            elif line.startswith("TDA_REFRESH_TOKEN="):
+                new_content.append(f"TDA_REFRESH_TOKEN={self.refresh_token}\n")
+            elif line.startswith("TDA_ACCESS_TOKEN_EXPIRY="):
+                new_content.append(f"TDA_ACCESS_TOKEN_EXPIRY={(datetime.now() + timedelta(seconds=self.expires_in)).isoformat()}\n")
+            elif hasattr(self, 'refresh_token_expires_in') and line.startswith("TDA_REFRESH_TOKEN_EXPIRY="):
+                new_content.append(f"TDA_REFRESH_TOKEN_EXPIRY={(datetime.now() + timedelta(seconds=self.refresh_token_expires_in)).isoformat()}\n")
+            else:
+                new_content.append(line)
+
+        # 寫回.env文件
         with open(env_path, 'w') as f:
-            f.write(f"TDA_ACCESS_TOKEN={self.access_token}\n")
-            f.write(f"TDA_REFRESH_TOKEN={self.refresh_token}\n")
-            f.write(f"TDA_ACCESS_TOKEN_EXPIRY={(datetime.now() + timedelta(seconds=self.expires_in)).isoformat()}\n")
-            if hasattr(self, 'refresh_token_expires_in'):
-                f.write(f"TDA_REFRESH_TOKEN_EXPIRY={(datetime.now() + timedelta(seconds=self.refresh_token_expires_in)).isoformat()}\n")
+            f.writelines(new_content)
 
     def load_tokens_from_env(self):
         """Load tokens and their expiration times from .env."""
